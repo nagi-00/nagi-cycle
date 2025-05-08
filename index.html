@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cycle Tracker</title>
   <style>
     @font-face { font-family:'HJSS'; src:url('HJSS.ttf') format('truetype'); }
@@ -14,30 +13,25 @@
     * { box-sizing:border-box; margin:0; padding:0 }
     body { display:flex; align-items:center; justify-content:center; height:100vh; background:#f9f9f9; font-family:'HJSS',sans-serif }
     .wrapper { width:100%; max-width:400px; background:#fff; border-radius:8px; padding:1rem; box-shadow:0 2px 8px rgba(0,0,0,0.1) }
-
     header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem }
     button.nav { background:none; border:none; font-size:1.5rem; cursor:pointer; color:#555 }
     #month-year { cursor:pointer; font-weight:bold }
-
     .weekdays { display:grid; grid-template-columns:repeat(7,1fr); margin-top:2rem; margin-bottom:1rem }
     .weekdays div { text-align:center; padding:0.5rem 0 }
     .weekdays .sun { color:#cd8d8d }
     .weekdays .sat { color:#7373b2 }
     .weekdays div:not(.sun):not(.sat) { color:#333 }
-
     #calendar { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:1rem }
     #calendar button {
       width:100%; border:none; background:transparent;
-      padding:0.5rem 0; font-size:1rem; cursor:pointer;
+      padding:0.5rem 0; font-size:calc(1rem - 1pt); cursor:pointer;
       position:relative; color:#333;
     }
     #calendar button.sun { color:#cd8d8d }
     #calendar button.sat { color:#7373b2 }
-
     .period-range { background:var(--shade-period) }
     .period-circle { background:var(--circle-color); border-radius:50% }
     .ovulation-circle { background:var(--shade-ovulation); border-radius:50% }
-
     #message-box { text-align:center; font-size:0.9rem; color:#555; min-height:2em }
   </style>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -68,89 +62,99 @@
       <div>WED</div><div>THU</div><div>FRI</div><div class="sat">SAT</div>
     </div>
     <div id="calendar"></div>
-    <div id="message-box">
-      <!-- 격려 문구 아래에만 -->
-    </div>
+    <div id="message-box"></div>
   </div>
+
   <script>
     (()=>{
-      const ref = db.ref('cycleDates'); // 루트에 바로 저장
-      const messages = [
-        "너의 몸은 너보다 더 많은 언어를 알고 있어.",
-        "잠시 멈춰 숨 쉬는 것 만으로도 충분할 때가 있어.",
-        "이 또한 지나갈거고, 그 안에서 너는 더 단단해질거야."
+      const ref = db.ref('cycleDates');
+      const periodMessages = [
+        "몸이 차가워지기 쉬운 시기야. 따뜻한 차로 혈액 순환을 도와줘.",
+        "에너지 소모가 크니 무리하지 말고 충분히 쉬어.",
+        "감정 기복이 있을 수 있다. 자신에게도 관대해져 봐.",
+        "코어 근육 이완을 위해 가벼운 스트레칭이 도움이 될 거야.",
+        "잘 먹고 잘 쉬는 것이 지금 가장 중요한 활력제야.",
+        "수분을 충분히 섭취하면 몸이 좀 더 편안해질 거야."
       ];
+      const ovulationMessages = [
+        "배란일 전후에는 호르몬 변화가 활발해. 피부 관리를 신경 써봐.",
+        "에너지 레벨이 상승하는 시기야. 가벼운 운동으로 활력을 느껴봐.",
+        "정신이 맑아지는 때이니 하고 싶던 일을 시도해봐.",
+        "호르몬 균형을 위해 단백질 섭취에 주의를 기울여.",
+        "감정이 예민해질 수 있어. 자기 자신에게 친절하게 대하길.",
+        "자신감을 느끼기 좋은 시기야. 스스로를 응원해."
+      ];
+
       let dates = [], avgCycle = 0, view = new Date();
       const elMonthYear = document.getElementById('month-year');
       const elCalendar  = document.getElementById('calendar');
       const elMessage   = document.getElementById('message-box');
-      const pick        = ()=> messages[Math.floor(Math.random()*messages.length)];
 
-      document.getElementById('prev').addEventListener('click',()=>{ view.setMonth(view.getMonth()-1); render(); });
-      document.getElementById('next').addEventListener('click',()=>{ view.setMonth(view.getMonth()+1); render(); });
-      elMonthYear.addEventListener('click',()=>{ view = new Date(); render(); });
+      document.getElementById('prev').addEventListener('click',()=>{
+        view.setMonth(view.getMonth()-1); render();
+      });
+      document.getElementById('next').addEventListener('click',()=>{
+        view.setMonth(view.getMonth()+1); render();
+      });
+      elMonthYear.addEventListener('click',()=>{
+        view = new Date(); render();
+      });
 
-      // 저장된 날짜 불러오기
-      ref.on('value', snap => {
-        const val = snap.val() || {};
-        // 만약 푸시(push)로 저장된 문자열이 있다면 val[key] === date
-        dates = [];
-        for (let k in val) {
-          const v = val[k];
-          if (/^\d{4}-\d{2}-\d{2}$/.test(k)) dates.push(k);
-          else if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) dates.push(v);
-        }
-        dates = [...new Set(dates)].sort();
-        if (dates.length >= 2) {
-          const diffs = dates.slice(1).map((d,i)=> (new Date(d) - new Date(dates[i]))/86400000);
+      ref.on('value', snap=>{
+        const val = snap.val()||{};
+        dates = Object.keys(val).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
+        if(dates.length>=2){
+          const diffs = dates.slice(1).map((d,i)=> (new Date(d)-new Date(dates[i]))/86400000);
           avgCycle = Math.round(diffs.reduce((a,b)=>a+b)/diffs.length);
         }
         render();
-        elMessage.textContent = pick();
       });
 
       function render(){
         const y = view.getFullYear(), m = view.getMonth();
         elMonthYear.textContent = `${y}년 ${m+1}월`;
         elCalendar.innerHTML = '';
+
         const firstDay = new Date(y,m,1).getDay();
         const total    = new Date(y,m+1,0).getDate();
-        // 빈칸
         for(let i=0;i<firstDay;i++) elCalendar.appendChild(document.createElement('button')).disabled = true;
 
-        const lastDate  = dates.length? new Date(dates.at(-1)) : null;
-        const nextStart = lastDate? new Date(lastDate.getTime() + avgCycle*86400000) : null;
-        const startP    = nextStart;
-        const endP      = nextStart? new Date(startP.getTime() + 4*86400000) : null;
-        const ovDay     = nextStart? new Date(nextStart.getTime() -14*86400000) : null;
+        const lastDate   = dates.length ? new Date(dates.at(-1)) : null;
+        const startP     = lastDate ? new Date(lastDate.getTime() + avgCycle*86400000) : null;
+        const endP       = startP  ? new Date(startP.getTime() + 4*86400000)          : null;
+        const ovDay      = startP  ? new Date(startP.getTime() - 14*86400000)         : null;
+        const now        = new Date();
 
         for(let d=1; d<=total; d++){
           const btn = document.createElement('button');
-          const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+          const ds  = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
           btn.textContent = d;
-          // 요일 색
+
           const w = new Date(y,m,d).getDay();
           if(w===0) btn.classList.add('sun');
           else if(w===6) btn.classList.add('sat');
-          // 클릭 토글
+
           btn.addEventListener('click', ()=>{
-            if (dates.includes(ds)) {
-              // 삭제: 날짜 키로 존재하면 제거, 아니면 값으로 존재하면 찾아서 remove()
-              if (ref.child(ds)) ref.child(ds).remove();
-              for (let k in (snap=ref.get().then()) ){}
-              // 간단하게, 제거 다시 데이터를 덮어쓰기
-              const updated = dates.filter(x=>x!==ds);
-              ref.set(updated.reduce((o,d)=>{ o[d]=d; return o }, {}));
-            } else {
-              ref.child(ds).set(ds);
-            }
+            if(dates.includes(ds)) ref.child(ds).remove();
+            else ref.child(ds).set(true);
           });
+
           const cd = new Date(y,m,d).getTime();
-          if(startP && cd>=startP.getTime() && cd<=endP.getTime())   btn.classList.add('period-range');
+          if(startP && cd>=startP.getTime() && cd<=endP.getTime()) btn.classList.add('period-range');
           if(startP && (cd===startP.getTime()||cd===endP.getTime())) btn.classList.add('period-circle');
-          if(ovDay && cd===ovDay.getTime())                          btn.classList.add('ovulation-circle');
+          if(ovDay  && cd===ovDay.getTime())                           btn.classList.add('ovulation-circle');
+
           elCalendar.appendChild(btn);
         }
+
+        // 오늘 날짜 기준으로 메시지 설정
+        let msg = '';
+        if (startP && now>=startP && now<=endP) {
+          msg = periodMessages[Math.floor(Math.random()*periodMessages.length)];
+        } else if (ovDay && Math.abs(now.getTime() - ovDay.getTime()) <= 86400000) {
+          msg = ovulationMessages[Math.floor(Math.random()*ovulationMessages.length)];
+        }
+        elMessage.textContent = msg;
       }
     })();
   </script>
