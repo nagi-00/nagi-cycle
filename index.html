@@ -13,10 +13,11 @@
     *{box-sizing:border-box;margin:0;padding:0}
     body{display:flex;align-items:center;justify-content:center;height:100vh;background:#f9f9f9;font-family:'HJSS',sans-serif}
     .wrapper{width:100%;max-width:400px;background:#fff;border-radius:8px;padding:1rem;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
-    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem}
     button.nav{background:none;border:none;font-size:1.5rem;cursor:pointer;color:#555}
     #month-year{cursor:pointer;font-weight:bold}
-    .weekdays{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:0.5rem}
+    /* 여백 늘린 부분 */
+    .weekdays{display:grid;grid-template-columns:repeat(7,1fr);margin-top:1.5rem;margin-bottom:1rem}
     .weekdays div{text-align:center;padding:0.5rem 0}
     .weekdays .sun{color:#cd8d8d}
     .weekdays .sat{color:#7373b2}
@@ -53,13 +54,8 @@
       <button class="nav" id="next">&rarr;</button>
     </header>
     <div class="weekdays">
-      <div class="sun">SUN</div>
-      <div>MON</div>
-      <div>TUE</div>
-      <div>WED</div>
-      <div>THU</div>
-      <div>FRI</div>
-      <div class="sat">SAT</div>
+      <div class="sun">SUN</div><div>MON</div><div>TUE</div>
+      <div>WED</div><div>THU</div><div>FRI</div><div class="sat">SAT</div>
     </div>
     <div id="calendar"></div>
     <div id="message-box"></div>
@@ -76,7 +72,7 @@
       const elMonthYear = document.getElementById('month-year');
       const elCalendar  = document.getElementById('calendar');
       const elMessage   = document.getElementById('message-box');
-      const pickMessage = ()=> messages[Math.floor(Math.random()*messages.length)];
+      const pick = ()=> messages[Math.floor(Math.random()*messages.length)];
 
       document.getElementById('prev').addEventListener('click',()=>{
         view.setMonth(view.getMonth()-1);
@@ -93,7 +89,9 @@
 
       ref.on('value',snap=>{
         const val = snap.val()||{};
-        dates = Object.keys(val).sort();
+        dates = Object.keys(val)
+          .filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k))
+          .sort();
         if(dates.length>=2){
           const diffs = dates.slice(1).map((d,i)=>
             (new Date(d)-new Date(dates[i]))/86400000
@@ -101,7 +99,7 @@
           avgCycle = Math.round(diffs.reduce((a,b)=>a+b)/diffs.length);
         }
         render();
-        elMessage.textContent = pickMessage();
+        elMessage.textContent = pick();
       });
 
       function render(){
@@ -110,43 +108,33 @@
         elCalendar.innerHTML = '';
         const firstDay = new Date(y,m,1).getDay();
         const total   = new Date(y,m+1,0).getDate();
-        for(let i=0;i<firstDay;i++){
-          elCalendar.appendChild(document.createElement('div'));
-        }
-        const lastDate    = dates.length? new Date(dates[dates.length-1]) : null;
-        const nextPeriod  = lastDate? new Date(lastDate.getTime()+avgCycle*86400000) : null;
-        const periodStart = nextPeriod;
-        const periodEnd   = nextPeriod? new Date(periodStart.getTime()+4*86400000) : null;
-        const ovulation   = nextPeriod? new Date(nextPeriod.getTime()-14*86400000) : null;
+        for(let i=0;i<firstDay;i++) elCalendar.appendChild(document.createElement('div'));
+
+        const lastDate   = dates.length? new Date(dates.at(-1)) : null;
+        const nextPeriod = lastDate? new Date(lastDate.getTime()+avgCycle*86400000) : null;
+        const startP     = nextPeriod;
+        const endP       = nextPeriod? new Date(startP.getTime()+4*86400000) : null;
+        const ovDay      = nextPeriod? new Date(nextPeriod.getTime()-14*86400000) : null;
 
         for(let d=1; d<=total; d++){
           const cell = document.createElement('div');
           const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
           cell.textContent = d;
-          // 요일 색상
+          // 주말 색상
           const w = new Date(y,m,d).getDay();
           if(w===0) cell.classList.add('sun');
           else if(w===6) cell.classList.add('sat');
-
-          // 터치로 시작일 토글
-          cell.addEventListener('click',()=>{
+          // 클릭·터치 이벤트
+          const toggle = ()=>{
             if(dates.includes(ds)) ref.child(ds).remove();
             else ref.child(ds).set(true);
-          });
-
+          };
+          cell.addEventListener('pointerup', e=>{ e.preventDefault(); toggle(); });
+          // 예상 기간 음영
           const cd = new Date(y,m,d).getTime();
-          // 예상 생리 범위
-          if(periodStart && cd>=periodStart.getTime() && cd<=periodEnd.getTime()){
-            cell.classList.add('period-range');
-          }
-          // 시작·끝일 원형 강조
-          if(periodStart && (cd===periodStart.getTime()||cd===periodEnd.getTime())){
-            cell.classList.add('period-circle');
-          }
-          // 배란일 원형
-          if(ovulation && cd===ovulation.getTime()){
-            cell.classList.add('ovulation-circle');
-          }
+          if(startP && cd>=startP.getTime() && cd<=endP.getTime()) cell.classList.add('period-range');
+          if(startP && (cd===startP.getTime()||cd===endP.getTime())) cell.classList.add('period-circle');
+          if(ovDay && cd===ovDay.getTime()) cell.classList.add('ovulation-circle');
           elCalendar.appendChild(cell);
         }
       }
