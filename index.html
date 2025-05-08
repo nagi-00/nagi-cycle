@@ -1,41 +1,37 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cycle Tracker</title>
   <style>
-    @font-face {
-      font-family: 'HJSS';
-      src: url('HJSS.ttf') format('truetype');
+    @font-face{font-family:'HJSS';src:url('HJSS.ttf') format('truetype')}
+    :root{
+      --shade-period:#f4dfe4;
+      --shade-ovulation:#b5c0e3;
+      --circle-color:#E1a3b3;
     }
-    :root {
-      --shade-period: #f4dfe4;
-      --shade-ovulation: #b5c0e3;
-      --circle-color: #E1a3b3;
-    }
-    * { box-sizing:border-box; margin:0; padding:0 }
-    body { display:flex; align-items:center; justify-content:center; height:100vh; background:#f9f9f9; font-family:'HJSS',sans-serif }
-    .wrapper { width:100%; max-width:400px; background:#fff; border-radius:8px; padding:1rem; box-shadow:0 2px 8px rgba(0,0,0,0.1) }
-    header { display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem }
-    button.nav { background:none; border:none; font-size:1.5rem; cursor:pointer; color:#555 }
-    #month-year { cursor:pointer; font-weight:bold }
-    #encourage { text-align:center; font-size:0.9rem; color:#666; margin-bottom:0.5rem }
-    .weekdays, #calendar { display:grid; grid-template-columns:repeat(7,1fr); }
-    .weekdays div, #calendar div { text-align:center; padding:0.5rem 0; }
-    .weekdays .sun { color:#cd8d8d }
-    .weekdays .sat { color:#7373b2 }
-    .weekdays div:not(.sun):not(.sat) { color:#333 }
-    #calendar div { position:relative; cursor:pointer; }
-    .period-range { background:var(--shade-period) }
-    .period-circle { background:var(--circle-color); border-radius:50% }
-    .ovulation-circle { background:var(--shade-ovulation); border-radius:50% }
-    #message-box { text-align:center; font-size:0.9rem; color:#555; margin-top:0.5rem; min-height:2em }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{display:flex;align-items:center;justify-content:center;height:100vh;background:#f9f9f9;font-family:'HJSS',sans-serif}
+    .wrapper{width:100%;max-width:400px;background:#fff;border-radius:8px;padding:1rem;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+    button.nav{background:none;border:none;font-size:1.5rem;cursor:pointer;color:#555}
+    #month-year{cursor:pointer;font-weight:bold}
+    .weekdays{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:0.5rem}
+    .weekdays div{text-align:center;padding:0.5rem 0}
+    .weekdays .sun{color:#cd8d8d}
+    .weekdays .sat{color:#7373b2}
+    #calendar{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:1rem}
+    #calendar div{text-align:center;padding:0.5rem 0;cursor:pointer;position:relative;color:#333}
+    #calendar .sun{color:#cd8d8d}
+    #calendar .sat{color:#7373b2}
+    .period-range{background:var(--shade-period)}
+    .period-circle{background:var(--circle-color);border-radius:50%}
+    .ovulation-circle{background:var(--shade-ovulation);border-radius:50%}
+    #message-box{text-align:center;font-size:0.9rem;color:#555;min-height:2em}
   </style>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script>
-    // 네 Firebase 콘솔에서 복사한 설정 그대로
     const firebaseConfig = {
       apiKey: "AIzaSyCpkhJyp2qPyr-duuda-VNeMj26YjfdjoM",
       authDomain: "nagi-cycle.firebaseapp.com",
@@ -56,10 +52,14 @@
       <div id="month-year"></div>
       <button class="nav" id="next">&rarr;</button>
     </header>
-    <div id="encourage"></div>
     <div class="weekdays">
-      <div class="sun">SUN</div><div>MON</div><div>TUE</div>
-      <div>WED</div><div>THU</div><div>FRI</div><div class="sat">SAT</div>
+      <div class="sun">SUN</div>
+      <div>MON</div>
+      <div>TUE</div>
+      <div>WED</div>
+      <div>THU</div>
+      <div>FRI</div>
+      <div class="sat">SAT</div>
     </div>
     <div id="calendar"></div>
     <div id="message-box"></div>
@@ -68,69 +68,83 @@
     (()=>{
       const ref = db.ref('users/anonymous/cycleDates');
       const messages = [
-        "너의 몸은 너보다 더 많은 언어를 알아.",
-        "잠시 멈춰 숨 쉬는 것만으로도 충분할 때가 있지.",
-        "이 또한 지나갈거고, 그 안에서 너는 더 단단해질거야."
+        "너의 몸은 너보다 더 많은 언어를 안다.",
+        "잠시 멈춰 숨 쉬는 것만으로도 충분할 때가 있다.",
+        "이 또한 지나가리라, 그 안에서 너는 더 단단해진다."
       ];
-      let dates = [], avgCycle = 0;
-      let view = new Date();
+      let dates = [], avgCycle = 0, view = new Date();
       const elMonthYear = document.getElementById('month-year');
-      const elEncourage = document.getElementById('encourage');
       const elCalendar  = document.getElementById('calendar');
       const elMessage   = document.getElementById('message-box');
-      const pick = ()=> messages[Math.floor(Math.random()*messages.length)];
+      const pickMessage = ()=> messages[Math.floor(Math.random()*messages.length)];
 
-      document.getElementById('prev').onclick = ()=> { view.setMonth(view.getMonth()-1); render() };
-      document.getElementById('next').onclick = ()=> { view.setMonth(view.getMonth()+1); render() };
-      elMonthYear.onclick = ()=> { view = new Date(); render() };
+      document.getElementById('prev').addEventListener('click',()=>{
+        view.setMonth(view.getMonth()-1);
+        render();
+      });
+      document.getElementById('next').addEventListener('click',()=>{
+        view.setMonth(view.getMonth()+1);
+        render();
+      });
+      elMonthYear.addEventListener('click',()=>{
+        view = new Date();
+        render();
+      });
 
-      ref.on('value', snap => {
+      ref.on('value',snap=>{
         const val = snap.val()||{};
         dates = Object.keys(val).sort();
-        if (dates.length >= 2) {
-          const diffs = dates.slice(1).map((d,i)=> (new Date(d) - new Date(dates[i])) / 86400000);
+        if(dates.length>=2){
+          const diffs = dates.slice(1).map((d,i)=>
+            (new Date(d)-new Date(dates[i]))/86400000
+          );
           avgCycle = Math.round(diffs.reduce((a,b)=>a+b)/diffs.length);
         }
         render();
-        elMessage.textContent = pick();
+        elMessage.textContent = pickMessage();
       });
 
       function render(){
         const y = view.getFullYear(), m = view.getMonth();
         elMonthYear.textContent = `${y}년 ${m+1}월`;
-        elEncourage.textContent = pick();
         elCalendar.innerHTML = '';
-
-        const first = new Date(y,m,1).getDay();
-        const days  = new Date(y,m+1,0).getDate();
-        for(let i=0;i<first;i++) elCalendar.appendChild(document.createElement('div'));
-
-        const lastDate    = dates.length ? new Date(dates[dates.length-1]) : null;
-        const nextPeriod  = lastDate ? new Date(lastDate.getTime() + avgCycle*86400000) : null;
+        const firstDay = new Date(y,m,1).getDay();
+        const total   = new Date(y,m+1,0).getDate();
+        for(let i=0;i<firstDay;i++){
+          elCalendar.appendChild(document.createElement('div'));
+        }
+        const lastDate    = dates.length? new Date(dates[dates.length-1]) : null;
+        const nextPeriod  = lastDate? new Date(lastDate.getTime()+avgCycle*86400000) : null;
         const periodStart = nextPeriod;
-        const periodEnd   = nextPeriod ? new Date(periodStart.getTime() + 4*86400000) : null;
-        const ovDay       = nextPeriod ? new Date(nextPeriod.getTime() - 14*86400000) : null;
+        const periodEnd   = nextPeriod? new Date(periodStart.getTime()+4*86400000) : null;
+        const ovulation   = nextPeriod? new Date(nextPeriod.getTime()-14*86400000) : null;
 
-        for(let d=1; d<=days; d++){
+        for(let d=1; d<=total; d++){
           const cell = document.createElement('div');
           const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
           cell.textContent = d;
+          // 요일 색상
+          const w = new Date(y,m,d).getDay();
+          if(w===0) cell.classList.add('sun');
+          else if(w===6) cell.classList.add('sat');
+
           // 터치로 시작일 토글
-          cell.onclick = ()=> {
-            if (dates.includes(ds)) ref.child(ds).remove();
+          cell.addEventListener('click',()=>{
+            if(dates.includes(ds)) ref.child(ds).remove();
             else ref.child(ds).set(true);
-          };
+          });
+
           const cd = new Date(y,m,d).getTime();
-          // 생리 예상 기간
-          if (periodStart && cd >= periodStart.getTime() && cd <= periodEnd.getTime()) {
+          // 예상 생리 범위
+          if(periodStart && cd>=periodStart.getTime() && cd<=periodEnd.getTime()){
             cell.classList.add('period-range');
           }
           // 시작·끝일 원형 강조
-          if (periodStart && (cd === periodStart.getTime() || cd === periodEnd.getTime())) {
+          if(periodStart && (cd===periodStart.getTime()||cd===periodEnd.getTime())){
             cell.classList.add('period-circle');
           }
           // 배란일 원형
-          if (ovDay && cd === ovDay.getTime()) {
+          if(ovulation && cd===ovulation.getTime()){
             cell.classList.add('ovulation-circle');
           }
           elCalendar.appendChild(cell);
