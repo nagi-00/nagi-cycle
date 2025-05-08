@@ -58,15 +58,17 @@
       display:flex; align-items:center; justify-content:center;
       background:transparent; border:none; cursor:pointer;
       font-size:calc(1rem - 1pt); color:#333;
+      z-index: 1;
     }
     .sun.day { color:#cd8d8d }
     .sat.day { color:#7373b2 }
 
-    /* 1) 연속된 연한 음영 */
+    /* 1) 연속된 연한 음영 (pill body) */
     #calendar .day.period-range {
       background-color: var(--shade-period) !important;
+      z-index: 0;
     }
-    /* 2) 시작/끝일 위의 작은 원 */
+    /* 2) 시작·끝에 떠오르는 진한 원형 (pill ends) */
     #calendar .day.period-circle::before {
       content: '';
       position: absolute;
@@ -76,9 +78,9 @@
       left: 15%;
       background-color: var(--circle-color);
       border-radius: 50%;
-      z-index: 0;
+      z-index: 2;
     }
-    /* 3) 배란일 원 */
+    /* 3) 배란일 원형 */
     #calendar .day.ovulation-circle::before {
       content: '';
       position: absolute;
@@ -88,18 +90,17 @@
       left: 15%;
       background-color: var(--shade-ovulation);
       border-radius: 50%;
-      z-index: 0;
+      z-index: 2;
     }
-    /* 4) 원 안의 숫자는 흰색 */
+    /* 4) 원 안 숫자 강조 */
     #calendar .day.period-circle,
     #calendar .day.ovulation-circle {
       color: #fff !important;
-      z-index: 1;
     }
 
     #message-box {
       text-align:center; font-size:0.9rem; color:#555;
-      min-height:2em;
+      min-height:2em; margin-top:1rem;
     }
   </style>
 
@@ -126,10 +127,12 @@
       <div id="month-year"></div>
       <button class="nav" id="next">&rarr;</button>
     </header>
+
     <div class="weekdays">
       <div class="sun">SUN</div><div>MON</div><div>TUE</div>
       <div>WED</div><div>THU</div><div>FRI</div><div class="sat">SAT</div>
     </div>
+
     <div id="calendar"></div>
     <div id="message-box"></div>
   </div>
@@ -139,22 +142,52 @@
       const PERIOD_DAYS      = 6;   // 시작일 포함 총 7일
       const OVULATION_OFFSET = 14;  // 시작일부터 14일째
 
-      const periodMessages = [ /* … */ ];
-      const ovulationMessages = [ /* … */ ];
+      const periodMessages = [
+        "몸이 차가워지기 쉬운 시기야. 따뜻한 차가 혈액 순환에 도움이 될 거야.",
+        "에너지 소모가 크니 무리하지 말고 충분히 쉬어.",
+        "감정 기복이 있을 수 있어. 자신에게도 관대해지길.",
+        "코어 근육 이완에 가벼운 스트레칭이 도움이 될 거야.",
+        "잘 먹고 잘 쉬는 것이 지금 가장 중요해.",
+        "수분을 충분히 섭취하면 몸이 좀 더 편안해질 거야.",
+        "가벼운 요가나 스트레칭으로 부드럽게 흐름을 따라가 보자.",
+        "따뜻한 물로 샤워하거나 족욕을 하면 긴장이 풀리고 편안함이 찾아올 거야."
+      ];
+      const ovulationMessages = [
+        "배란일 전후에는 호르몬 변화가 활발해서 피부가 거칠어지기 쉬워.",
+        "에너지 레벨이 상승하는 시기야. 가벼운 운동으로 활력을 느껴봐.",
+        "정신이 맑아지는 때이니 하고 싶던 일을 시도해봐.",
+        "호르몬 균형을 위해 단백질 섭취에 주의를 기울여.",
+        "감정이 예민해질 수 있어. 자기 자신에게 친절하게 대하길.",
+        "자신감을 느끼기 좋은 시기야. 스스로를 응원해.",
+        "호흡이 깊어지고 몸이 가벼워지는 느낌, 잠깐의 명상으로 집중력을 높여보자.",
+        "네 안의 리듬이 활발해지는 때. 동적인 하루를 보내도 좋아. "
+      ];
 
-      const ref       = db.ref('cycleDates');
-      let dates       = [];
-      let viewDate    = new Date();
-      const elCal     = document.getElementById('calendar');
-      const elMonth   = document.getElementById('month-year');
-      const elMessage = document.getElementById('message-box');
-      document.getElementById('prev').onclick = ()=>{ viewDate.setMonth(viewDate.getMonth()-1); render(); };
-      document.getElementById('next').onclick = ()=>{ viewDate.setMonth(viewDate.getMonth()+1); render(); };
-      elMonth.onclick = ()=>{ viewDate = new Date(); render(); };
+      const ref     = db.ref('cycleDates');
+      let dates     = [];
+      let viewDate  = new Date();
+      const elCal   = document.getElementById('calendar');
+      const elMonth = document.getElementById('month-year');
+      const elMsg   = document.getElementById('message-box');
+
+      document.getElementById('prev').onclick = ()=>{
+        viewDate.setMonth(viewDate.getMonth()-1);
+        render();
+      };
+      document.getElementById('next').onclick = ()=>{
+        viewDate.setMonth(viewDate.getMonth()+1);
+        render();
+      };
+      elMonth.onclick = ()=>{
+        viewDate = new Date();
+        render();
+      };
 
       ref.on('value', snap=>{
-        dates = Object.keys(snap.val()||{})
-          .filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
+        const val = snap.val()||{};
+        dates = Object.keys(val)
+          .filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k))
+          .sort();
         render();
       });
 
@@ -167,7 +200,7 @@
         elMonth.textContent = `${y}년 ${m+1}월`;
         elCal.innerHTML = '';
 
-        // 빈칸
+        // placeholder
         const startWeek = new Date(y,m,1).getDay();
         for(let i=0;i<startWeek;i++){
           const ph = document.createElement('div');
@@ -175,67 +208,64 @@
           elCal.appendChild(ph);
         }
 
-        // 한 번에 셋 계산
-        const periodSet  = new Set();
-        const circleSet  = new Set();
-        const ovulaSet   = new Set();
-        dates.forEach(startStr=>{
-          const st = new Date(startStr);
-          // 연속 음영
+        // 기간, 원 계산
+        const periodSet = new Set();
+        const circleSet = new Set();
+        const ovulaSet  = new Set();
+        dates.forEach(str=>{
+          const st = new Date(str);
           for(let i=0;i<=PERIOD_DAYS;i++){
             const tmp = new Date(st);
             tmp.setDate(tmp.getDate()+i);
             periodSet.add(toStr(tmp));
           }
-          // 시작·끝 원
-          circleSet.add(startStr);
+          circleSet.add(str);
           const end = new Date(st);
           end.setDate(end.getDate()+PERIOD_DAYS);
           circleSet.add(toStr(end));
-          // 배란일 원
           const ov = new Date(st);
           ov.setDate(ov.getDate()+OVULATION_OFFSET);
           ovulaSet.add(toStr(ov));
         });
 
         const daysInMonth = new Date(y,m+1,0).getDate();
-        const today       = new Date();
+        const today = new Date();
 
         for(let d=1; d<=daysInMonth; d++){
           const btn = document.createElement('button');
           btn.classList.add('day');
           const curr = new Date(y,m,d), ds = toStr(curr);
           btn.textContent = d;
-          // 주말 색
           const wd = curr.getDay();
           if(wd===0) btn.classList.add('sun');
           else if(wd===6) btn.classList.add('sat');
-          // 음영 & 원
+
           if(periodSet.has(ds))    btn.classList.add('period-range');
           if(circleSet.has(ds))    btn.classList.add('period-circle');
           if(ovulaSet.has(ds))     btn.classList.add('ovulation-circle');
-          // 클릭 토글
+
           btn.onclick = ()=>{
-            if(dates.includes(ds)) ref.child(ds).remove();
-            else ref.child(ds).set(true);
+            if(dates.includes(ds))    ref.child(ds).remove();
+            else                      ref.child(ds).set(true);
           };
           elCal.appendChild(btn);
         }
 
         // 메시지
         let msg = '';
-        dates.forEach(startStr=>{
-          const stMs = new Date(startStr).getTime();
+        dates.forEach(str=>{
+          const stMs = new Date(str).getTime();
           const endMs= stMs + PERIOD_DAYS*86400000;
-          const ovMs = stMs + OVULATION_OFFSET*86400000;
+          const ovMs = new Date(str).getTime() + OVULATION_OFFSET*86400000;
           const nowMs= today.getTime();
+
           if(nowMs>=stMs && nowMs<=endMs){
             msg = periodMessages[Math.floor(Math.random()*periodMessages.length)];
           } else if(nowMs===ovMs){
             msg = ovulationMessages[Math.floor(Math.random()*ovulationMessages.length)];
           }
         });
-        elMessage.textContent = msg;
+        elMsg.textContent = msg;
       }
     })();
   </script>
