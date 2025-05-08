@@ -14,89 +14,75 @@
       --shade-ovulation: #b5c0e3;
       --circle-color: #E1a3b3;
     }
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin:0; padding:0 }
     body {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      background: #f9f9f9;
-      font-family: 'HJSS', sans-serif;
+      display:flex; align-items:center; justify-content:center;
+      height:100vh; background:#f9f9f9; font-family:'HJSS',sans-serif;
     }
     .wrapper {
-      width: 100%;
-      max-width: 400px;
-      background: #fff;
-      border-radius: 8px;
-      padding: 1rem;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      width:100%; max-width:400px; background:#fff;
+      border-radius:8px; padding:1rem;
+      box-shadow:0 2px 8px rgba(0,0,0,0.1);
     }
     header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 1rem;
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:1rem;
     }
     button.nav {
-      background: none;
-      border: none;
-      font-size: 1.5rem;
-      cursor: pointer;
-      color: #555;
+      background:none; border:none; font-size:1.5rem;
+      cursor:pointer; color:#555;
     }
     #month-year {
-      cursor: pointer;
-      font-weight: bold;
+      cursor:pointer; font-weight:bold;
     }
     .weekdays {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      margin-top: 2rem;
-      margin-bottom: 1rem;
+      display:grid; grid-template-columns:repeat(7,1fr);
+      margin-top:2rem; margin-bottom:1rem;
     }
     .weekdays div {
-      text-align: center;
-      padding: 0.5rem 0;
+      text-align:center; padding:0.5rem 0;
     }
-    .weekdays .sun { color: #cd8d8d }
-    .weekdays .sat { color: #7373b2 }
-    .weekdays div:not(.sun):not(.sat) { color: #333 }
+    .weekdays .sun { color:#cd8d8d }
+    .weekdays .sat { color:#7373b2 }
+    .weekdays div:not(.sun):not(.sat) { color:#333 }
+
     #calendar {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 2px;
-      margin-bottom: 1rem;
+      display:grid; grid-template-columns:repeat(7,1fr);
+      gap:2px; margin-bottom:1rem;
     }
+    /* 빈 칸도 정사각형으로 */
     #calendar .placeholder {
-      visibility: hidden;
-      padding: 0.5rem 0;
+      visibility:hidden; width:100%; aspect-ratio:1/1;
     }
+    /* 날짜 버튼을 정사각형으로 */
     #calendar button {
-      width: 100%;
-      border: none;
-      background: transparent;
-      padding: 0.5rem 0;
-      font-size: calc(1rem - 1pt);
-      cursor: pointer;
-      position: relative;
-      color: #333;
+      width:100%; aspect-ratio:1/1;
+      display:flex; align-items:center; justify-content:center;
+      font-size:calc(1rem - 1pt);
+      background:transparent; border:none; cursor:pointer;
+      color:#333; position:relative;
     }
-    #calendar button.sun { color: #cd8d8d }
-    #calendar button.sat { color: #7373b2 }
-    .period-range { background: var(--shade-period) }
-    .period-circle { background: var(--circle-color); border-radius: 50% }
-    .ovulation-circle { background: var(--shade-ovulation); border-radius: 50% }
+    #calendar button.sun { color:#cd8d8d }
+    #calendar button.sat { color:#7373b2 }
+
+    .period-range {
+      background: var(--shade-period);
+    }
+    .period-circle {
+      background: var(--circle-color);
+      border-radius: 50%;
+    }
+    .ovulation-circle {
+      background: var(--shade-ovulation);
+      border-radius: 50%;
+    }
+
     #message-box {
-      text-align: center;
-      font-size: 0.9rem;
-      color: #555;
-      min-height: 2em;
+      text-align:center; font-size:0.9rem; color:#555;
+      min-height:2em;
     }
   </style>
+
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script>
@@ -127,6 +113,7 @@
     <div id="calendar"></div>
     <div id="message-box"></div>
   </div>
+
   <script>
     (()=>{
       const ref = db.ref('cycleDates');
@@ -153,16 +140,13 @@
       const elMessage   = document.getElementById('message-box');
 
       document.getElementById('prev').addEventListener('click',()=>{
-        view.setMonth(view.getMonth()-1);
-        render();
+        view.setMonth(view.getMonth()-1); render();
       });
       document.getElementById('next').addEventListener('click',()=>{
-        view.setMonth(view.getMonth()+1);
-        render();
+        view.setMonth(view.getMonth()+1); render();
       });
       elMonthYear.addEventListener('click',()=>{
-        view = new Date();
-        render();
+        view = new Date(); render();
       });
 
       ref.on('value', snap=>{
@@ -192,8 +176,8 @@
           elCalendar.appendChild(div);
         }
 
-        const total = new Date(y,m+1,0).getDate();
-        const lastDate = dates.length ? new Date(dates.at(-1)) : null;
+        const total   = new Date(y,m+1,0).getDate();
+        const lastDate= dates.length ? new Date(dates.at(-1)) : null;
         let startP, endP, ovDay;
         if(lastDate){
           startP = new Date(lastDate.getTime() + avgCycle*86400000);
@@ -207,33 +191,25 @@
           const ds  = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
           btn.textContent = d;
 
-          const w = new Date(y,m,d).getDay();
+          const w=new Date(y,m,d).getDay();
           if(w===0) btn.classList.add('sun');
           else if(w===6) btn.classList.add('sat');
 
-          const cd = new Date(y,m,d).getTime();
+          const cd=new Date(y,m,d).getTime();
           // 저장된 시작일
-          if(dates.includes(ds)) {
-            btn.classList.add('period-circle');
-          }
+          if(dates.includes(ds)) btn.classList.add('period-circle');
           // 예상 기간
-          if(startP && cd>=startP.getTime() && cd<=endP.getTime()){
+          if(startP && cd>=startP.getTime()&&cd<=endP.getTime())
             btn.classList.add('period-range');
-          }
-          if(startP && (cd===startP.getTime()||cd===endP.getTime())){
+          if(startP && (cd===startP.getTime()||cd===endP.getTime()))
             btn.classList.add('period-circle');
-          }
           // 배란일
-          if(ovDay && cd===ovDay.getTime()){
+          if(ovDay && cd===ovDay.getTime())
             btn.classList.add('ovulation-circle');
-          }
 
           btn.addEventListener('click', ()=>{
-            if(dates.includes(ds)){
-              ref.child(ds).remove();
-            } else {
-              ref.child(ds).set(true);
-            }
+            if(dates.includes(ds)) ref.child(ds).remove();
+            else ref.child(ds).set(true);
           });
 
           elCalendar.appendChild(btn);
@@ -241,7 +217,7 @@
 
         // 메시지
         let msg = '';
-        if(startP && now>=startP && now<=endP){
+        if(startP && now>=startP&&now<=endP){
           msg = periodMessages[Math.floor(Math.random()*periodMessages.length)];
         } else if(ovDay && Math.abs(now.getTime()-ovDay.getTime())<=86400000){
           msg = ovulationMessages[Math.floor(Math.random()*ovulationMessages.length)];
