@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Cycle Tracker</title>
   <style>
     @font-face {
@@ -32,9 +32,7 @@
       background:none; border:none; font-size:1.5rem;
       cursor:pointer; color:#555;
     }
-    #month-year {
-      cursor:pointer; font-weight:bold;
-    }
+    #month-year { cursor:pointer; font-weight:bold }
     .weekdays {
       display:grid; grid-template-columns:repeat(7,1fr);
       margin-top:2rem; margin-bottom:1rem;
@@ -50,31 +48,32 @@
       display:grid; grid-template-columns:repeat(7,1fr);
       gap:2px; margin-bottom:1rem;
     }
-    /* 빈 칸도 정사각형으로 */
-    #calendar .placeholder {
+    /* 빈 칸은 보이지 않는 버튼 */
+    #calendar button.placeholder {
       visibility:hidden; width:100%; aspect-ratio:1/1;
+      border:none; background:transparent; cursor:default;
     }
-    /* 날짜 버튼을 정사각형으로 */
-    #calendar button {
+    /* 날짜 버튼 기본 */
+    #calendar button.day {
       width:100%; aspect-ratio:1/1;
       display:flex; align-items:center; justify-content:center;
-      font-size:calc(1rem - 1pt);
-      background:transparent; border:none; cursor:pointer;
-      color:#333; position:relative;
+      background-color:transparent; border:none; cursor:pointer;
+      font-size:calc(1rem - 1pt); color:#333; position:relative;
     }
-    #calendar button.sun { color:#cd8d8d }
-    #calendar button.sat { color:#7373b2 }
+    #calendar button.sun.day { color:#cd8d8d }
+    #calendar button.sat.day { color:#7373b2 }
 
-    .period-range {
-      background: var(--shade-period);
+    /* 상태별 강제 적용 */
+    #calendar button.day.period-range {
+      background-color: var(--shade-period) !important;
     }
-    .period-circle {
-      background: var(--circle-color);
-      border-radius: 50%;
+    #calendar button.day.period-circle {
+      background-color: var(--circle-color) !important;
+      border-radius: 50% !important;
     }
-    .ovulation-circle {
-      background: var(--shade-ovulation);
-      border-radius: 50%;
+    #calendar button.day.ovulation-circle {
+      background-color: var(--shade-ovulation) !important;
+      border-radius: 50% !important;
     }
 
     #message-box {
@@ -139,90 +138,75 @@
       const elCalendar  = document.getElementById('calendar');
       const elMessage   = document.getElementById('message-box');
 
-      document.getElementById('prev').addEventListener('click',()=>{
-        view.setMonth(view.getMonth()-1); render();
-      });
-      document.getElementById('next').addEventListener('click',()=>{
-        view.setMonth(view.getMonth()+1); render();
-      });
-      elMonthYear.addEventListener('click',()=>{
-        view = new Date(); render();
-      });
+      document.getElementById('prev').onclick = ()=>{ view.setMonth(view.getMonth()-1); render(); };
+      document.getElementById('next').onclick = ()=>{ view.setMonth(view.getMonth()+1); render(); };
+      elMonthYear.onclick = ()=>{ view = new Date(); render(); };
 
       ref.on('value', snap=>{
         const val = snap.val()||{};
-        dates = Object.keys(val)
-          .filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k))
-          .sort();
+        dates = Object.keys(val).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
         if(dates.length>=2){
-          const diffs = dates.slice(1).map((d,i)=>
-            (new Date(d)-new Date(dates[i]))/86400000
-          );
+          const diffs = dates.slice(1).map((d,i)=>(new Date(d)-new Date(dates[i]))/86400000);
           avgCycle = Math.round(diffs.reduce((a,b)=>a+b)/diffs.length);
         }
         render();
       });
 
       function render(){
-        const y = view.getFullYear(), m = view.getMonth();
-        elMonthYear.textContent = `${y}년 ${m+1}월`;
-        elCalendar.innerHTML = '';
+        const y=view.getFullYear(), m=view.getMonth();
+        elMonthYear.textContent=`${y}년 ${m+1}월`;
+        elCalendar.innerHTML='';
 
         // 빈 칸
-        const firstDay = new Date(y,m,1).getDay();
+        const firstDay=new Date(y,m,1).getDay();
         for(let i=0;i<firstDay;i++){
-          const div = document.createElement('div');
-          div.classList.add('placeholder');
-          elCalendar.appendChild(div);
+          const ph=document.createElement('button');
+          ph.disabled=true; ph.classList.add('placeholder');
+          elCalendar.appendChild(ph);
         }
 
-        const total   = new Date(y,m+1,0).getDate();
-        const lastDate= dates.length ? new Date(dates.at(-1)) : null;
-        let startP, endP, ovDay;
+        const total=new Date(y,m+1,0).getDate();
+        const lastDate=dates.length?new Date(dates.at(-1)):null;
+        let startP,endP,ovDay;
         if(lastDate){
-          startP = new Date(lastDate.getTime() + avgCycle*86400000);
-          endP   = new Date(startP.getTime() + 4*86400000);
-          ovDay  = new Date(startP.getTime() - 14*86400000);
+          startP=new Date(lastDate.getTime()+avgCycle*86400000);
+          endP=new Date(startP.getTime()+4*86400000);
+          ovDay=new Date(startP.getTime()-14*86400000);
         }
+        const now=new Date();
 
-        const now = new Date();
         for(let d=1; d<=total; d++){
-          const btn = document.createElement('button');
-          const ds  = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-          btn.textContent = d;
+          const btn=document.createElement('button');
+          btn.classList.add('day');
+          const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+          btn.textContent=d;
 
           const w=new Date(y,m,d).getDay();
           if(w===0) btn.classList.add('sun');
           else if(w===6) btn.classList.add('sat');
 
           const cd=new Date(y,m,d).getTime();
-          // 저장된 시작일
           if(dates.includes(ds)) btn.classList.add('period-circle');
-          // 예상 기간
-          if(startP && cd>=startP.getTime()&&cd<=endP.getTime())
-            btn.classList.add('period-range');
-          if(startP && (cd===startP.getTime()||cd===endP.getTime()))
-            btn.classList.add('period-circle');
-          // 배란일
-          if(ovDay && cd===ovDay.getTime())
-            btn.classList.add('ovulation-circle');
+          if(startP&&cd>=startP.getTime()&&cd<=endP.getTime()) btn.classList.add('period-range');
+          if(startP&&(cd===startP.getTime()||cd===endP.getTime())) btn.classList.add('period-circle');
+          if(ovDay&&cd===ovDay.getTime()) btn.classList.add('ovulation-circle');
 
-          btn.addEventListener('click', ()=>{
+          btn.onclick=()=>{
             if(dates.includes(ds)) ref.child(ds).remove();
             else ref.child(ds).set(true);
-          });
+            render();
+          };
 
           elCalendar.appendChild(btn);
         }
 
-        // 메시지
-        let msg = '';
-        if(startP && now>=startP&&now<=endP){
-          msg = periodMessages[Math.floor(Math.random()*periodMessages.length)];
-        } else if(ovDay && Math.abs(now.getTime()-ovDay.getTime())<=86400000){
-          msg = ovulationMessages[Math.floor(Math.random()*ovulationMessages.length)];
+        let msg='';
+        if(startP&&now>=startP&&now<=endP){
+          msg=periodMessages[Math.floor(Math.random()*periodMessages.length)];
+        } else if(ovDay&&Math.abs(now.getTime()-ovDay.getTime())<=86400000){
+          msg=ovulationMessages[Math.floor(Math.random()*ovulationMessages.length)];
         }
-        elMessage.textContent = msg;
+        elMessage.textContent=msg;
       }
     })();
   </script>
