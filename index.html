@@ -1,40 +1,41 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cycle Tracker</title>
   <style>
+    @font-face {
+      font-family: 'HJSS';
+      src: url('HJSS.ttf') format('truetype');
+    }
     :root {
-      --month-color: #fde2e2;      /* 기본 1월 색 */
-      --shade-period: rgba(255, 182, 193, 0.5);
-      --shade-ovulation: rgba(173, 216, 230, 0.5);
+      --shade-period: #f4dfe4;
+      --shade-ovulation: #b5c0e3;
+      --circle-color: #E1a3b3;
     }
-    body { margin:0; display:flex; align-items:center; justify-content:center; height:100vh; font-family:sans-serif; background:#fafafa }
-    .wrapper { width:100%; max-width:400px; text-align:center; }
-    #calendar {
-      display:grid;
-      grid-template-columns:repeat(7,1fr);
-      gap:1px;
-      background:var(--month-color);
-      margin-bottom:1rem;
-    }
-    #calendar div {
-      padding:0.8rem 0;
-      border:1px solid #ccc;
-      background:transparent;
-    }
-    .period    { background: var(--shade-period); }
-    .ovulation { background: var(--shade-ovulation); }
-    #input-form { display:flex; justify-content:center; gap:0.5rem; margin-bottom:1rem; }
-    #input-form input { flex:1; padding:0.5rem; border:1px solid #ccc; border-radius:4px }
-    #input-form button { padding:0.5rem 1rem; border:none; border-radius:4px; background:#88f; color:#fff; cursor:pointer }
-    #message-box { padding:1rem; font-size:0.9rem; color:#555; min-height:3em }
+    * { box-sizing:border-box; margin:0; padding:0 }
+    body { display:flex; align-items:center; justify-content:center; height:100vh; background:#f9f9f9; font-family:'HJSS',sans-serif }
+    .wrapper { width:100%; max-width:400px; background:#fff; border-radius:8px; padding:1rem; box-shadow:0 2px 8px rgba(0,0,0,0.1) }
+    header { display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem }
+    button.nav { background:none; border:none; font-size:1.5rem; cursor:pointer; color:#555 }
+    #month-year { cursor:pointer; font-weight:bold }
+    #encourage { text-align:center; font-size:0.9rem; color:#666; margin-bottom:0.5rem }
+    .weekdays, #calendar { display:grid; grid-template-columns:repeat(7,1fr); }
+    .weekdays div, #calendar div { text-align:center; padding:0.5rem 0; }
+    .weekdays .sun { color:#cd8d8d }
+    .weekdays .sat { color:#7373b2 }
+    .weekdays div:not(.sun):not(.sat) { color:#333 }
+    #calendar div { position:relative; cursor:pointer; }
+    .period-range { background:var(--shade-period) }
+    .period-circle { background:var(--circle-color); border-radius:50% }
+    .ovulation-circle { background:var(--shade-ovulation); border-radius:50% }
+    #message-box { text-align:center; font-size:0.9rem; color:#555; margin-top:0.5rem; min-height:2em }
   </style>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script>
-    // 
-    const firebaseConfig = {
+        const firebaseConfig = {
   apiKey: "AIzaSyCpkhJyp2qPyr-duuda-VNeMj26YjfdjoM",
   authDomain: "nagi-cycle.firebaseapp.com",
   databaseURL: "https://nagi-cycle-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -49,64 +50,97 @@
 </head>
 <body>
   <div class="wrapper">
+    <header>
+      <button class="nav" id="prev">&larr;</button>
+      <div id="month-year"></div>
+      <button class="nav" id="next">&rarr;</button>
+    </header>
+    <div id="encourage"></div>
+    <div class="weekdays">
+      <div class="sun">SUN</div><div>MON</div><div>TUE</div>
+      <div>WED</div><div>THU</div><div>FRI</div><div class="sat">SAT</div>
+    </div>
     <div id="calendar"></div>
-    <form id="input-form">
-      <input type="date" id="date-input" required>
-      <button type="submit">등록</button>
-    </form>
     <div id="message-box"></div>
   </div>
   <script>
     (()=>{
+      // DB 경로 구성
       const ref = db.ref('users/anonymous/cycleDates');
+      // 격려문구 목록
       const messages = [
-        "너의 몸은 너보다 더 많은 언어를 알아.",
-        "잠시 멈춰 숨 쉬는 것만으로도 충분할 때가 있지.",
-        "이 또한 지나갈거고, 그 안에서 너는 더 단단해질거야."
+        "너의 몸은 너보다 더 많은 언어를 안다.",
+        "잠시 멈춰 숨 쉬는 것만으로도 충분할 때가 있다.",
+        "이 또한 지나가리라, 그 안에서 너는 더 단단해진다."
       ];
-      const pickMessage = ()=> messages[Math.floor(Math.random()*messages.length)];
-      document.getElementById('input-form').addEventListener('submit', e=>{
-        e.preventDefault();
-        const d = document.getElementById('date-input').value;
-        if(!d) return;
-        ref.push(d);
-        document.getElementById('date-input').value = '';
-      });
+      let dates = [], avgCycle=0;
+      // 현재 표시할 연월
+      let view = new Date();
+      // 요소 참조
+      const elMonthYear = document.getElementById('month-year');
+      const elEncourage = document.getElementById('encourage');
+      const elCalendar  = document.getElementById('calendar');
+      const elMessage   = document.getElementById('message-box');
+      // 랜덤 격려문구
+      const pick = ()=> messages[Math.floor(Math.random()*messages.length)];
+      // 이전·다음·오늘
+      document.getElementById('prev').onclick = ()=>{ view.setMonth(view.getMonth()-1); render() };
+      document.getElementById('next').onclick = ()=>{ view.setMonth(view.getMonth()+1); render() };
+      elMonthYear.onclick = ()=>{ view = new Date(); render() };
+      // DB 실시간 수신
       ref.on('value', snap=>{
-        const dates = snap.exists() ? Object.values(snap.val()).sort() : [];
-        renderCalendar(dates);
-        document.getElementById('message-box').textContent = pickMessage();
+        const val = snap.val()||{};
+        dates = Object.keys(val).sort();
+        if(dates.length>=2){
+          const diffs = dates.slice(1).map((d,i)=>(new Date(d)-new Date(dates[i]))/86400000);
+          avgCycle = Math.round(diffs.reduce((a,b)=>a+b)/diffs.length);
+        }
+        render();
+        elMessage.textContent = pick();
       });
-      function renderCalendar(dates){
-        const cal = document.getElementById('calendar');
-        cal.innerHTML = '';
-        const now = new Date(), y = now.getFullYear(), m = now.getMonth();
-        const firstDay = new Date(y,m,1).getDay();
-        const daysInMonth = new Date(y,m+1,0).getDate();
-        // 달 별 색 지정
-        const colors = ['#fde2e2','#e2f0cb','#ffe4e1','#e1f0ff','#f7e3ff','#e3ffe7',
-                        '#fff5e1','#e1f7ff','#ffebe1','#e1ffe9','#f1e1ff','#e1eaff'];
-        document.documentElement.style.setProperty('--month-color', colors[m]);
-        for(let i=0;i<firstDay;i++) cal.appendChild(document.createElement('div'));
-        for(let d=1;d<=daysInMonth;d++){
+      // 달력 렌더
+      function render(){
+        // 헤더
+        const y = view.getFullYear(), m = view.getMonth();
+        elMonthYear.textContent = `${y}년 ${m+1}월`;
+        elEncourage.textContent = pick();
+        // 달력 합성
+        elCalendar.innerHTML = '';
+        const first = new Date(y,m,1).getDay();
+        const days  = new Date(y,m+1,0).getDate();
+        // 빈칸
+        for(let i=0;i<first;i++) elCalendar.appendChild(document.createElement('div'));
+        // 날짜 생성
+        dates; // 최신화
+        const lastDate = dates.length? new Date(dates[dates.length-1]) : null;
+        const nextPeriod = lastDate? new Date(lastDate.getTime() + avgCycle*86400000) : null;
+        const periodStart = nextPeriod;
+        const periodEnd   = nextPeriod? new Date(nextPeriod.getTime()+4*86400000) : null;
+        const ovDay = nextPeriod? new Date(nextPeriod.getTime() -14*86400000) : null;
+        for(let d=1;d<=days;d++){
           const cell = document.createElement('div');
           const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
           cell.textContent = d;
-          if(dates.includes(ds)) cell.classList.add('period');
-          cal.appendChild(cell);
-        }
-        if(dates.length>=2){
-          const diffs = dates.slice(1).map((d,i)=> (new Date(d)-new Date(dates[i]))/86400000 );
-          const avg = Math.round(diffs.reduce((a,b)=>a+b)/diffs.length);
-          const last = new Date(dates[dates.length-1]);
-          const ovStart = new Date(last); ovStart.setDate(last.getDate()+avg-14);
-          const ovEnd   = new Date(ovStart); ovEnd.setDate(ovStart.getDate()+5);
-          Array.from(cal.children).forEach(cell=>{
-            const day = Number(cell.textContent);
-            if(!day) return;
-            const cur = new Date(y,m,day);
-            if(cur>=ovStart && cur<=ovEnd) cell.classList.add('ovulation');
-          });
+          // 터치 토글
+          cell.onclick = ()=> {
+            if(dates.includes(ds)) ref.child(ds).remove();
+            else ref.child(ds).set(true);
+          };
+          // 예상 생리 기간 음영 및 시작·끝일 원형
+          if(periodStart && periodEnd){
+            const cd = new Date(y,m,d).getTime();
+            if(cd >= periodStart.getTime() && cd <= periodEnd.getTime()){
+              cell.classList.add('period-range');
+            }
+            if(cd === periodStart.getTime() || cd === periodEnd.getTime()){
+              cell.classList.add('period-circle');
+            }
+          }
+          // 배란일 원형
+          if(ovDay && cd === ovDay.getTime()){
+            cell.classList.add('ovulation-circle');
+          }
+          elCalendar.appendChild(cell);
         }
       }
     })();
