@@ -14,7 +14,7 @@
       --circle-color: #E1a3b3;
       --shade-ovulation: #b5c0e3;
     }
-    * { box-sizing: border-box; margin:0; padding:0 }
+    * { box-sizing:border-box; margin:0; padding:0 }
     body {
       display:flex; align-items:center; justify-content:center;
       height:100vh; background:#f9f9f9; font-family:'HJSS',sans-serif;
@@ -47,34 +47,33 @@
 
     #calendar {
       display:grid; grid-template-columns:repeat(7,1fr);
-      margin-bottom:1rem; gap:0;
+      gap:0; margin-bottom:1rem;
     }
-    #calendar button.placeholder {
+    #calendar .placeholder {
       visibility:hidden; width:100%; aspect-ratio:1/1;
-      background:transparent; border:none; cursor:default;
     }
-    #calendar button.day {
+    #calendar .day {
       width:100%; aspect-ratio:1/1;
       display:flex; align-items:center; justify-content:center;
       background:transparent; border:none; cursor:pointer;
       font-size:calc(1rem - 1pt); color:#333; position:relative;
     }
-    #calendar button.sun.day { color:#cd8d8d }
-    #calendar button.sat.day { color:#7373b2 }
+    #calendar .sun.day { color:#cd8d8d }
+    #calendar .sat.day { color:#7373b2 }
 
-    /* 생리 예측 기간 옅은 음영 */
-    #calendar button.day.period-range {
+    /* 생리 예상 기간 옅은 음영 */
+    #calendar .day.period-range {
       background-color: var(--shade-period) !important;
     }
     /* 생리 시작/끝 원형 */
-    #calendar button.day.period-circle {
+    #calendar .day.period-circle {
       background-color: var(--circle-color) !important;
-      border-radius: 50% !important;
+      border-radius:50% !important;
     }
     /* 배란일 원형 */
-    #calendar button.day.ovulation-circle {
+    #calendar .day.ovulation-circle {
       background-color: var(--shade-ovulation) !important;
-      border-radius: 50% !important;
+      border-radius:50% !important;
     }
 
     #message-box {
@@ -115,22 +114,21 @@
   </div>
 
   <script>
-    (()=>{
-      const CYCLE_LENGTH = 28;     // 평균 주기
-      const PERIOD_DAYS   = 6;      // 시작일 포함 7일간
-      const OVULATION_OFFSET = CYCLE_LENGTH - 14; // 시작일로부터 14일째
+    (() => {
+      const CYCLE_LENGTH      = 28;
+      const PERIOD_DAYS       = 6;   // 시작일 포함 7일간
+      const OVULATION_OFFSET  = 14;  // 시작일로부터 14일째
 
-      const ref = db.ref('cycleDates');
       const periodMessages = [
-        "몸이 차가워지기 쉬운 시기야. 따뜻한 차로 혈액 순환을 도와줘.",
+        "몸이 차가워지기 쉬운 시기야. 따뜻한 차 등으로 혈액 순환을 도와줘.",
         "에너지 소모가 크니 무리하지 말고 충분히 쉬어.",
-        "감정 기복이 있을 수 있다. 자신에게도 관대해져 봐.",
+        "감정 기복이 있을 수 있어. 자신에게도 관대해져 봐.",
         "코어 근육 이완을 위해 가벼운 스트레칭이 도움이 될 거야.",
-        "잘 먹고 잘 쉬는 것이 지금 가장 중요한 활력제야.",
+        "잘 먹고 잘 쉬는 것이 지금 가장 중요해.",
         "수분을 충분히 섭취하면 몸이 좀 더 편안해질 거야."
       ];
       const ovulationMessages = [
-        "배란일 전후에는 호르몬 변화가 활발해. 피부 관리를 신경 써봐.",
+        "배란일 전후에는 호르몬 변화가 활발해서 피부가 거칠어지기 쉬운 시기야.",
         "에너지 레벨이 상승하는 시기야. 가벼운 운동으로 활력을 느껴봐.",
         "정신이 맑아지는 때이니 하고 싶던 일을 시도해봐.",
         "호르몬 균형을 위해 단백질 섭취에 주의를 기울여.",
@@ -138,101 +136,98 @@
         "자신감을 느끼기 좋은 시기야. 스스로를 응원해."
       ];
 
-      let dates = [], view = new Date();
-      const elMonthYear = document.getElementById('month-year');
-      const elCalendar  = document.getElementById('calendar');
-      const elMessage   = document.getElementById('message-box');
+      const ref        = db.ref('cycleDates');
+      let   dates      = [];
+      let   view       = new Date();
 
-      document.getElementById('prev').onclick = ()=>{ view.setMonth(view.getMonth()-1); render(); };
-      document.getElementById('next').onclick = ()=>{ view.setMonth(view.getMonth()+1); render(); };
-      elMonthYear.onclick = ()=>{ view = new Date(); render(); };
+      const elCalender = document.getElementById('calendar');
+      const elMonth    = document.getElementById('month-year');
+      const elMessage  = document.getElementById('message-box');
+      const prevBtn    = document.getElementById('prev');
+      const nextBtn    = document.getElementById('next');
 
-      ref.on('value', snap=>{
-        const val = snap.val()||{};
-        dates = Object.keys(val).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
+      prevBtn.onclick = () => { view.setMonth(view.getMonth()-1); render(); };
+      nextBtn.onclick = () => { view.setMonth(view.getMonth()+1); render(); };
+      elMonth.onclick = () => { view = new Date(); render(); };
+
+      ref.on('value', snap => {
+        const val = snap.val() || {};
+        dates = Object.keys(val).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
         render();
       });
 
-      function toDateStr(d){
+      function toDateStr(d) {
         return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       }
 
-      function render(){
-        const y = view.getFullYear(), m = view.getMonth();
-        elMonthYear.textContent = `${y}년 ${m+1}월`;
-        elCalendar.innerHTML = '';
+      function render() {
+        const year = view.getFullYear(), month = view.getMonth();
+        elMonth.textContent = `${year}년 ${month+1}월`;
+        elCalender.innerHTML = '';
 
-        const firstDay = new Date(y,m,1).getDay();
-        for(let i=0;i<firstDay;i++){
-          const ph = document.createElement('button');
-          ph.disabled = true;
+        // 빈 칸
+        const firstDay = new Date(year,month,1).getDay();
+        for (let i=0; i<firstDay; i++) {
+          const ph = document.createElement('div');
           ph.classList.add('placeholder');
-          elCalendar.appendChild(ph);
+          elCalender.appendChild(ph);
         }
 
-        const total = new Date(y,m+1,0).getDate();
+        const daysInMonth = new Date(year,month+1,0).getDate();
         const now = new Date();
 
-        dates.forEach(startStr=>{
-          // nothing here; we compute per cell
-        });
-
-        for(let d=1; d<=total; d++){
+        for (let d=1; d<=daysInMonth; d++) {
           const btn = document.createElement('button');
           btn.classList.add('day');
-          const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+          const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
           btn.textContent = d;
 
-          const w = new Date(y,m,d).getDay();
-          if(w===0) btn.classList.add('sun');
-          else if(w===6) btn.classList.add('sat');
+          const weekday = new Date(year,month,d).getDay();
+          if (weekday === 0) btn.classList.add('sun');
+          else if (weekday === 6) btn.classList.add('sat');
 
-          const cd = new Date(y,m,d).getTime();
+          const cellTime = new Date(year,month,d).getTime();
 
-          dates.forEach(startStr=>{
-            const st = new Date(startStr);
-            const periodEnd = new Date(st);
-            periodEnd.setDate(st.getDate() + PERIOD_DAYS);
-            const ov = new Date(st);
-            ov.setDate(st.getDate() + OVULATION_OFFSET);
+          dates.forEach(startStr => {
+            const st = new Date(startStr).getTime();
+            const endSt = st + PERIOD_DAYS * 86400000;
+            const ov  = st + OVULATION_OFFSET * 86400000;
 
-            // 생리 음영
-            if(cd>=st.getTime() && cd<=periodEnd.getTime()){
+            // 생리기간 음영
+            if (cellTime >= st && cellTime <= endSt) {
               btn.classList.add('period-range');
             }
             // 생리 시작/끝 원
-            if(cd===st.getTime() || cd===periodEnd.getTime()){
+            if (cellTime === st || cellTime === endSt) {
               btn.classList.add('period-circle');
             }
             // 배란일 원
-            if(cd===ov.getTime()){
+            if (cellTime === ov) {
               btn.classList.add('ovulation-circle');
             }
           });
 
-          btn.onclick = ()=>{
-            if(dates.includes(ds)) {
+          btn.onclick = () => {
+            if (dates.includes(ds)) {
               ref.child(ds).remove();
             } else {
               ref.child(ds).set(true);
             }
           };
 
-          elCalendar.appendChild(btn);
+          elCalender.appendChild(btn);
         }
 
         // 메시지
         let msg = '';
-        dates.forEach(startStr=>{
-          const st = new Date(startStr);
-          const periodEnd = new Date(st);
-          periodEnd.setDate(st.getDate() + PERIOD_DAYS);
-          const ov = new Date(st);
-          ov.setDate(st.getDate() + OVULATION_OFFSET);
+        dates.forEach(startStr => {
+          const st = new Date(startStr).getTime();
+          const endSt = st + PERIOD_DAYS * 86400000;
+          const ov  = st + OVULATION_OFFSET * 86400000;
 
-          if(now>=st && now<=periodEnd) {
+          if (now.getTime() >= st && now.getTime() <= endSt) {
             msg = periodMessages[Math.floor(Math.random()*periodMessages.length)];
-          } else if(toDateStr(now) === toDateStr(ov)) {
+          } else if (toDateStr(now) === toDateStr(new Date(ov))) {
             msg = ovulationMessages[Math.floor(Math.random()*ovulationMessages.length)];
           }
         });
