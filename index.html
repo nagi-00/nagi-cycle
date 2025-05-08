@@ -1,34 +1,34 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cycle Tracker</title>
   <style>
-    @font-face{font-family:'HJSS';src:url('HJSS.ttf') format('truetype')}
-    :root{
-      --shade-period:#f4dfe4;
-      --shade-ovulation:#b5c0e3;
-      --circle-color:#E1a3b3;
+    @font-face { font-family:'HJSS'; src:url('HJSS.ttf') format('truetype'); }
+    :root {
+      --shade-period: #f4dfe4;
+      --shade-ovulation: #b5c0e3;
+      --circle-color: #E1a3b3;
     }
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{display:flex;align-items:center;justify-content:center;height:100vh;background:#f9f9f9;font-family:'HJSS',sans-serif}
-    .wrapper{width:100%;max-width:400px;background:#fff;border-radius:8px;padding:1rem;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
-    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem}
-    button.nav{background:none;border:none;font-size:1.5rem;cursor:pointer;color:#555}
-    #month-year{cursor:pointer;font-weight:bold}
-    /* 여백 늘린 부분 */
-    .weekdays{display:grid;grid-template-columns:repeat(7,1fr);margin-top:1.5rem;margin-bottom:1rem}
-    .weekdays div{text-align:center;padding:0.5rem 0}
-    .weekdays .sun{color:#cd8d8d}
-    .weekdays .sat{color:#7373b2}
-    #calendar{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:1rem}
-    #calendar div{text-align:center;padding:0.5rem 0;cursor:pointer;position:relative;color:#333}
-    #calendar .sun{color:#cd8d8d}
-    #calendar .sat{color:#7373b2}
-    .period-range{background:var(--shade-period)}
-    .period-circle{background:var(--circle-color);border-radius:50%}
-    .ovulation-circle{background:var(--shade-ovulation);border-radius:50%}
-    #message-box{text-align:center;font-size:0.9rem;color:#555;min-height:2em}
+    * { box-sizing:border-box; margin:0; padding:0 }
+    body { display:flex; align-items:center; justify-content:center; height:100vh; background:#f9f9f9; font-family:'HJSS',sans-serif }
+    .wrapper { width:100%; max-width:400px; background:#fff; border-radius:8px; padding:1rem; box-shadow:0 2px 8px rgba(0,0,0,0.1) }
+    header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem }
+    button.nav { background:none; border:none; font-size:1.5rem; cursor:pointer; color:#555 }
+    #month-year { cursor:pointer; font-weight:bold }
+    .weekdays { display:grid; grid-template-columns:repeat(7,1fr); margin-top:2rem; margin-bottom:1rem }
+    .weekdays div { text-align:center; padding:0.5rem 0 }
+    .weekdays .sun { color:#cd8d8d }
+    .weekdays .sat { color:#7373b2 }
+    #calendar { display:grid; grid-template-columns:repeat(7,1fr); margin-bottom:1rem }
+    #calendar div { text-align:center; padding:0.5rem 0; cursor:pointer; position:relative; color:#333 }
+    #calendar .sun { color:#cd8d8d }
+    #calendar .sat { color:#7373b2 }
+    .period-range { background:var(--shade-period) }
+    .period-circle { background:var(--circle-color); border-radius:50% }
+    .ovulation-circle { background:var(--shade-ovulation); border-radius:50% }
+    #message-box { text-align:center; font-size:0.9rem; color:#555; min-height:2em }
   </style>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
@@ -64,15 +64,15 @@
     (()=>{
       const ref = db.ref('users/anonymous/cycleDates');
       const messages = [
-        "너의 몸은 너보다 더 많은 언어를 안다.",
-        "잠시 멈춰 숨 쉬는 것만으로도 충분할 때가 있다.",
-        "이 또한 지나가리라, 그 안에서 너는 더 단단해진다."
+        "너의 몸은 너보다 더 많은 언어를 알고 있어.",
+        "잠시 멈춰 숨 쉬는 것 만으로도 충분할 때가 있어.",
+        "이 또한 지나갈거고, 그 안에서 너는 더 단단해질거야."
       ];
       let dates = [], avgCycle = 0, view = new Date();
       const elMonthYear = document.getElementById('month-year');
       const elCalendar  = document.getElementById('calendar');
       const elMessage   = document.getElementById('message-box');
-      const pick = ()=> messages[Math.floor(Math.random()*messages.length)];
+      const pickMessage = ()=> messages[Math.floor(Math.random()*messages.length)];
 
       document.getElementById('prev').addEventListener('click',()=>{
         view.setMonth(view.getMonth()-1);
@@ -87,19 +87,19 @@
         render();
       });
 
-      ref.on('value',snap=>{
+      ref.on('value', snap=>{
         const val = snap.val()||{};
         dates = Object.keys(val)
           .filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k))
           .sort();
         if(dates.length>=2){
           const diffs = dates.slice(1).map((d,i)=>
-            (new Date(d)-new Date(dates[i]))/86400000
+            (new Date(d) - new Date(dates[i]))/86400000
           );
           avgCycle = Math.round(diffs.reduce((a,b)=>a+b)/diffs.length);
         }
         render();
-        elMessage.textContent = pick();
+        elMessage.textContent = pickMessage();
       });
 
       function render(){
@@ -110,31 +110,33 @@
         const total   = new Date(y,m+1,0).getDate();
         for(let i=0;i<firstDay;i++) elCalendar.appendChild(document.createElement('div'));
 
-        const lastDate   = dates.length? new Date(dates.at(-1)) : null;
-        const nextPeriod = lastDate? new Date(lastDate.getTime()+avgCycle*86400000) : null;
+        const lastDate   = dates.length ? new Date(dates.at(-1)) : null;
+        const nextPeriod = lastDate ? new Date(lastDate.getTime() + avgCycle*86400000) : null;
         const startP     = nextPeriod;
-        const endP       = nextPeriod? new Date(startP.getTime()+4*86400000) : null;
-        const ovDay      = nextPeriod? new Date(nextPeriod.getTime()-14*86400000) : null;
+        const endP       = nextPeriod ? new Date(startP.getTime() + 4*86400000) : null;
+        const ovDay      = nextPeriod ? new Date(nextPeriod.getTime() - 14*86400000) : null;
 
         for(let d=1; d<=total; d++){
           const cell = document.createElement('div');
           const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
           cell.textContent = d;
-          // 주말 색상
+
           const w = new Date(y,m,d).getDay();
           if(w===0) cell.classList.add('sun');
           else if(w===6) cell.classList.add('sat');
-          // 클릭·터치 이벤트
+
           const toggle = ()=>{
             if(dates.includes(ds)) ref.child(ds).remove();
             else ref.child(ds).set(true);
           };
-          cell.addEventListener('pointerup', e=>{ e.preventDefault(); toggle(); });
-          // 예상 기간 음영
+          cell.addEventListener('click', toggle);
+          cell.addEventListener('touchend', e=>{ e.preventDefault(); toggle(); });
+
           const cd = new Date(y,m,d).getTime();
           if(startP && cd>=startP.getTime() && cd<=endP.getTime()) cell.classList.add('period-range');
           if(startP && (cd===startP.getTime()||cd===endP.getTime())) cell.classList.add('period-circle');
           if(ovDay && cd===ovDay.getTime()) cell.classList.add('ovulation-circle');
+
           elCalendar.appendChild(cell);
         }
       }
