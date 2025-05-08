@@ -14,7 +14,7 @@
       --shade-ovulation: #b5c0e3;
       --circle-color: #E1a3b3;
     }
-    * { box-sizing: border-box; margin:0; padding:0 }
+    * { box-sizing:border-box; margin:0; padding:0 }
     body {
       display:flex; align-items:center; justify-content:center;
       height:100vh; background:#f9f9f9; font-family:'HJSS',sans-serif;
@@ -33,6 +33,7 @@
       cursor:pointer; color:#555;
     }
     #month-year { cursor:pointer; font-weight:bold }
+
     .weekdays {
       display:grid; grid-template-columns:repeat(7,1fr);
       margin-top:2rem; margin-bottom:1rem;
@@ -46,14 +47,14 @@
 
     #calendar {
       display:grid; grid-template-columns:repeat(7,1fr);
-      gap:2px; margin-bottom:1rem;
+      margin-bottom:1rem; gap:0;
     }
-    /* 빈 칸은 보이지 않는 버튼 */
+    /* 빈 칸 */
     #calendar button.placeholder {
       visibility:hidden; width:100%; aspect-ratio:1/1;
       border:none; background:transparent; cursor:default;
     }
-    /* 날짜 버튼 기본 */
+    /* 날짜 버튼 */
     #calendar button.day {
       width:100%; aspect-ratio:1/1;
       display:flex; align-items:center; justify-content:center;
@@ -63,13 +64,17 @@
     #calendar button.sun.day { color:#cd8d8d }
     #calendar button.sat.day { color:#7373b2 }
 
-    /* 상태별 강제 적용 */
+    /* 생리기간 음영과 원 */
     #calendar button.day.period-range {
       background-color: var(--shade-period) !important;
     }
     #calendar button.day.period-circle {
       background-color: var(--circle-color) !important;
       border-radius: 50% !important;
+    }
+    /* 배란기간 음영과 원 */
+    #calendar button.day.ovulation-range {
+      background-color: var(--shade-ovulation) !important;
     }
     #calendar button.day.ovulation-circle {
       background-color: var(--shade-ovulation) !important;
@@ -145,68 +150,91 @@
       ref.on('value', snap=>{
         const val = snap.val()||{};
         dates = Object.keys(val).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
-        if(dates.length>=2){
-          const diffs = dates.slice(1).map((d,i)=>(new Date(d)-new Date(dates[i]))/86400000);
-          avgCycle = Math.round(diffs.reduce((a,b)=>a+b)/diffs.length);
-        }
         render();
       });
 
       function render(){
-        const y=view.getFullYear(), m=view.getMonth();
-        elMonthYear.textContent=`${y}년 ${m+1}월`;
-        elCalendar.innerHTML='';
+        const y = view.getFullYear(), m = view.getMonth();
+        elMonthYear.textContent = `${y}년 ${m+1}월`;
+        elCalendar.innerHTML = '';
 
         // 빈 칸
-        const firstDay=new Date(y,m,1).getDay();
+        const firstDay = new Date(y,m,1).getDay();
         for(let i=0;i<firstDay;i++){
-          const ph=document.createElement('button');
-          ph.disabled=true; ph.classList.add('placeholder');
+          const ph = document.createElement('button');
+          ph.disabled = true;
+          ph.classList.add('placeholder');
           elCalendar.appendChild(ph);
         }
 
-        const total=new Date(y,m+1,0).getDate();
-        const lastDate=dates.length?new Date(dates.at(-1)):null;
-        let startP,endP,ovDay;
-        if(lastDate){
-          startP=new Date(lastDate.getTime()+avgCycle*86400000);
-          endP=new Date(startP.getTime()+4*86400000);
-          ovDay=new Date(startP.getTime()-14*86400000);
-        }
-        const now=new Date();
+        const total = new Date(y,m+1,0).getDate();
+        const now = new Date();
 
         for(let d=1; d<=total; d++){
-          const btn=document.createElement('button');
+          const btn = document.createElement('button');
           btn.classList.add('day');
-          const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-          btn.textContent=d;
+          const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+          btn.textContent = d;
 
-          const w=new Date(y,m,d).getDay();
+          const w = new Date(y,m,d).getDay();
           if(w===0) btn.classList.add('sun');
           else if(w===6) btn.classList.add('sat');
 
-          const cd=new Date(y,m,d).getTime();
-          if(dates.includes(ds)) btn.classList.add('period-circle');
-          if(startP&&cd>=startP.getTime()&&cd<=endP.getTime()) btn.classList.add('period-range');
-          if(startP&&(cd===startP.getTime()||cd===endP.getTime())) btn.classList.add('period-circle');
-          if(ovDay&&cd===ovDay.getTime()) btn.classList.add('ovulation-circle');
+          const cd = new Date(y,m,d).getTime();
 
-          btn.onclick=()=>{
-            if(dates.includes(ds)) ref.child(ds).remove();
-            else ref.child(ds).set(true);
-            render();
+          // 각 저장된 시작일에 대해 period & ovulation shading
+          dates.forEach(startStr=>{
+            const st = new Date(startStr);
+            const pe = new Date(st.getTime()+6*86400000); // +6일
+            const oc = new Date(st.getTime() + (avgCycle-14)*86400000); // ovDay
+            // period-range
+            if(cd>=st.getTime() && cd<=pe.getTime()){
+              btn.classList.add('period-range');
+            }
+            // period-circle at boundaries
+            if(cd===st.getTime()||cd===pe.getTime()){
+              btn.classList.add('period-circle');
+            }
+            // ovulation-range: ovDay-1 ~ ovDay+1
+            const ovStart = new Date(oc.getTime()-1*86400000);
+            const ovEnd   = new Date(oc.getTime()+1*86400000);
+            if(cd>=ovStart.getTime() && cd<=ovEnd.getTime()){
+              btn.classList.add('ovulation-range');
+            }
+            // ovulation-circle at boundaries
+            if(cd===ovStart.getTime()||cd===ovEnd.getTime()){
+              btn.classList.add('ovulation-circle');
+            }
+          });
+
+          btn.onclick = ()=>{
+            if(dates.includes(ds)){
+              // remove this start
+              ref.child(ds).remove();
+            } else {
+              // add new start
+              ref.child(ds).set(true);
+            }
           };
 
           elCalendar.appendChild(btn);
         }
 
-        let msg='';
-        if(startP&&now>=startP&&now<=endP){
-          msg=periodMessages[Math.floor(Math.random()*periodMessages.length)];
-        } else if(ovDay&&Math.abs(now.getTime()-ovDay.getTime())<=86400000){
-          msg=ovulationMessages[Math.floor(Math.random()*ovulationMessages.length)];
-        }
-        elMessage.textContent=msg;
+        // 메시지: 오늘이 어느 구간인지 확인
+        let msg = '';
+        dates.forEach(startStr=>{
+          const st = new Date(startStr);
+          const pe = new Date(st.getTime()+6*86400000);
+          const oc = new Date(st.getTime() + (avgCycle-14)*86400000);
+          const ovStart = new Date(oc.getTime()-1*86400000);
+          const ovEnd   = new Date(oc.getTime()+1*86400000);
+          if(now>=st && now<=pe){
+            msg = periodMessages[Math.floor(Math.random()*periodMessages.length)];
+          } else if(now>=ovStart && now<=ovEnd){
+            msg = ovulationMessages[Math.floor(Math.random()*ovulationMessages.length)];
+          }
+        });
+        elMessage.textContent = msg;
       }
     })();
   </script>
