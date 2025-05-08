@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cycle Tracker</title>
+  <style>
+    :root {
+      --month-color: #fde2e2;      /* 기본 1월 색 */
+      --shade-period: rgba(255, 182, 193, 0.5);
+      --shade-ovulation: rgba(173, 216, 230, 0.5);
+    }
+    body { margin:0; display:flex; align-items:center; justify-content:center; height:100vh; font-family:sans-serif; background:#fafafa }
+    .wrapper { width:100%; max-width:400px; text-align:center; }
+    #calendar {
+      display:grid;
+      grid-template-columns:repeat(7,1fr);
+      gap:1px;
+      background:var(--month-color);
+      margin-bottom:1rem;
+    }
+    #calendar div {
+      padding:0.8rem 0;
+      border:1px solid #ccc;
+      background:transparent;
+    }
+    .period    { background: var(--shade-period); }
+    .ovulation { background: var(--shade-ovulation); }
+    #input-form { display:flex; justify-content:center; gap:0.5rem; margin-bottom:1rem; }
+    #input-form input { flex:1; padding:0.5rem; border:1px solid #ccc; border-radius:4px }
+    #input-form button { padding:0.5rem 1rem; border:none; border-radius:4px; background:#88f; color:#fff; cursor:pointer }
+    #message-box { padding:1rem; font-size:0.9rem; color:#555; min-height:3em }
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script>
+    // 
+    const firebaseConfig = {
+  apiKey: "AIzaSyCpkhJyp2qPyr-duuda-VNeMj26YjfdjoM",
+  authDomain: "nagi-cycle.firebaseapp.com",
+  databaseURL: "https://nagi-cycle-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "nagi-cycle",
+  storageBucket: "nagi-cycle.firebasestorage.app",
+  messagingSenderId: "428094469503",
+  appId: "1:428094469503:web:3c1e10b1fcb876077bd64a"
+};
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+  </script>
+</head>
+<body>
+  <div class="wrapper">
+    <div id="calendar"></div>
+    <form id="input-form">
+      <input type="date" id="date-input" required>
+      <button type="submit">등록</button>
+    </form>
+    <div id="message-box"></div>
+  </div>
+  <script>
+    (()=>{
+      const ref = db.ref('users/anonymous/cycleDates');
+      const messages = [
+        "너의 몸은 너보다 더 많은 언어를 알아.",
+        "잠시 멈춰 숨 쉬는 것만으로도 충분할 때가 있지.",
+        "이 또한 지나갈거고, 그 안에서 너는 더 단단해질거야."
+      ];
+      const pickMessage = ()=> messages[Math.floor(Math.random()*messages.length)];
+      document.getElementById('input-form').addEventListener('submit', e=>{
+        e.preventDefault();
+        const d = document.getElementById('date-input').value;
+        if(!d) return;
+        ref.push(d);
+        document.getElementById('date-input').value = '';
+      });
+      ref.on('value', snap=>{
+        const dates = snap.exists() ? Object.values(snap.val()).sort() : [];
+        renderCalendar(dates);
+        document.getElementById('message-box').textContent = pickMessage();
+      });
+      function renderCalendar(dates){
+        const cal = document.getElementById('calendar');
+        cal.innerHTML = '';
+        const now = new Date(), y = now.getFullYear(), m = now.getMonth();
+        const firstDay = new Date(y,m,1).getDay();
+        const daysInMonth = new Date(y,m+1,0).getDate();
+        // 달 별 색 지정
+        const colors = ['#fde2e2','#e2f0cb','#ffe4e1','#e1f0ff','#f7e3ff','#e3ffe7',
+                        '#fff5e1','#e1f7ff','#ffebe1','#e1ffe9','#f1e1ff','#e1eaff'];
+        document.documentElement.style.setProperty('--month-color', colors[m]);
+        for(let i=0;i<firstDay;i++) cal.appendChild(document.createElement('div'));
+        for(let d=1;d<=daysInMonth;d++){
+          const cell = document.createElement('div');
+          const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+          cell.textContent = d;
+          if(dates.includes(ds)) cell.classList.add('period');
+          cal.appendChild(cell);
+        }
+        if(dates.length>=2){
+          const diffs = dates.slice(1).map((d,i)=> (new Date(d)-new Date(dates[i]))/86400000 );
+          const avg = Math.round(diffs.reduce((a,b)=>a+b)/diffs.length);
+          const last = new Date(dates[dates.length-1]);
+          const ovStart = new Date(last); ovStart.setDate(last.getDate()+avg-14);
+          const ovEnd   = new Date(ovStart); ovEnd.setDate(ovStart.getDate()+5);
+          Array.from(cal.children).forEach(cell=>{
+            const day = Number(cell.textContent);
+            if(!day) return;
+            const cur = new Date(y,m,day);
+            if(cur>=ovStart && cur<=ovEnd) cell.classList.add('ovulation');
+          });
+        }
+      }
+    })();
+  </script>
+</body>
+</html>
